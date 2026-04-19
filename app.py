@@ -18,6 +18,22 @@ from openpyxl import Workbook
 
 app = Flask(__name__)
 
+def normalize_data(data):
+    normalized = []
+    for item in data:
+        normalized.append({
+            "name": item.get("name", "Unknown"),
+            "type": item.get("category", "Unknown"),
+            "city": item.get("city", ""),
+            "visited": item.get("visited", False),
+            "priority": item.get("priority", "Normal"),
+            "contact": item.get("contact_person", ""),
+            "phone": item.get("phone", ""),
+            "notes": item.get("notes", "")
+        })
+    return normalized
+
+
 DATA_FILE = BASE_DIR / "data" / "data.json"
 ROUTE_ORIGIN = "Durg"
 ROUTE = ["Rajnandgaon", "Dongargarh", "Bhandara", "Nagpur"]
@@ -535,17 +551,3 @@ def export():
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", "5000"))
     app.run(debug=False, host="127.0.0.1", port=port)
-    def normalize_data(data):
-    normalized = []
-    for item in data:
-        normalized.append({
-            "name": item.get("name", "Unknown"),
-            "type": item.get("category", "Unknown"),
-            "city": item.get("city", ""),
-            "visited": item.get("visited", False),
-            "priority": item.get("priority", "Normal"),
-            "contact": item.get("contact_person", ""),
-            "phone": item.get("phone", ""),
-            "notes": item.get("notes", "")
-        })
-    return normalized
