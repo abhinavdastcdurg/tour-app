@@ -34,7 +34,7 @@ def normalize_data(data):
     return normalized
 
 
-DATA_FILE = BASE_DIR / "data" / "data.json"
+DATA_FILE = BASE_DIR / "data.json"
 ROUTE_ORIGIN = "Durg"
 ROUTE = ["Rajnandgaon", "Dongargarh", "Bhandara", "Nagpur"]
 ROUTE_LEGS = {
