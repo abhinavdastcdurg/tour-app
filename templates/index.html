@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Outreach Route Dashboard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <header class="sticky-header">
+        <div class="sticky-inner">
+            <span class="sticky-label">Next Destination</span>
+            <strong>{{ next_destination or current_location }}</strong>
+            <small>
+                {% if next_leg_km %}
+                {{ next_leg_km }} km away
+                {% else %}
+                Final stop on route
+                {% endif %}
+            </small>
+            <div class="top-progress">
+                <div class="progress-track">
+                    <span style="width: {{ stats.overall_completion }}%"></span>
+                </div>
+                <span>{{ stats.overall_completion }}% visited</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="app-shell">
+        <section class="hero-mini">
+            <div>
+                <p class="eyebrow">Route Outreach</p>
+                <h1>Start from {{ origin_city }}, focus on what matters next.</h1>
+                <p class="hero-copy">Current location, next destination, and the highest-value visits are front and center. Everything else stays one tap away.</p>
+            </div>
+        </section>
+
+        <nav class="tab-switcher">
+            <a class="tab-link {{ 'active' if active_tab == 'home' else '' }}" href="{{ url_for('index', tab='home') }}">Home</a>
+            <a class="tab-link {{ 'active' if active_tab == 'all-data' else '' }}" href="{{ url_for('index', tab='all-data', tooling='high' if high_tooling_only else None) }}">All Data</a>
+            <a class="tab-link {{ 'active' if active_tab == 'summary' else '' }}" href="{{ url_for('index', tab='summary') }}">Summary</a>
+        </nav>
+
+        {% if active_tab == 'home' %}
+        <section class="focus-grid">
+            <article class="focus-card primary">
+                <span class="card-label">Current Location</span>
+                <strong>{{ current_location }}</strong>
+                <small>{{ current_city_pending }} pending visits</small>
+            </article>
+            <article class="focus-card">
+                <span class="card-label">Next Destination</span>
+                <strong>{{ next_destination or "Completed" }}</strong>
+                <small>
+                    {% if next_destination %}
+                    {{ next_city_pending }} planned visits
+                    {% else %}
+                    Route complete
+                    {% endif %}
+                </small>
+            </article>
+            <article class="focus-card">
+                <span class="card-label">Progress</span>
+                <strong>{{ stats.overall_completion }}%</strong>
+                <small>{{ stats.visited }} of {{ stats.total }} visited</small>
+            </article>
+        </section>
+
+        <section class="section-panel">
+            <div class="section-header compact">
+                <div>
+                    <p class="section-kicker">Focus Mode</p>
+                    <h2>Top 3-5 targets</h2>
+                </div>
+            </div>
+
+            <div class="card-stack">
+                {% for record in focus_targets %}
+                <article class="mobile-card {{ 'visited-card' if record.visited else 'pending-card' if record.status_key == 'not-visited' else 'followup-card' }}">
+                    <div class="mobile-card-top">
+                        <div>
+                            <span class="mini-type">{{ record.category }} · {{ record.sub_type or record.institute_type }}</span>
+                            <h3>{{ record.name }}</h3>
+                            <p>{{ record.city }} · {{ record.priority }} priority</p>
+                        </div>
+                        {% if record.is_high_value_target %}
+                        <span class="high-value-tag">High Value Target</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="status-row">
+                        <span class="status-chip {{ record.status_key }}">{{ record.status_label }}</span>
+                        {% if record.category == 'Industry' %}
+                        <span class="tooling-badge {{ record.tooling_class }}">{{ record.tooling_requirement }} tooling</span>
+                        {% else %}
+                        <span class="priority-badge {{ record.priority_class }}">{{ record.institute_type }}</span>
+                        {% endif %}
+                    </div>
+
+                    <div class="action-grid">
+                        <a class="action-button primary-action" href="{{ record.map_url }}" target="_blank" rel="noreferrer">Navigate</a>
+                        <form method="post" action="{{ url_for('toggle_visited', record_id=record.id) }}">
+                            <button class="action-button status-action {{ record.status_key }}" type="submit">
+                                {{ 'Mark Visited' if not record.visited else 'Visited' }}
+                            </button>
+                        </form>
+                        <a class="action-button secondary-action" href="#notes-{{ record.id }}">Add Notes</a>
+                    </div>
+
+                    <details class="details-panel">
+                        <summary>View details</summary>
+                        <div class="details-body">
+                            {% if record.category == 'Industry' %}
+                            <p><strong>Segment:</strong> {{ record.industry_segment }}</p>
+                            <p><strong>Tooling Need:</strong> {{ record.tooling_need }}</p>
+                            <p><strong>Opportunity:</strong> {{ record.business_opportunity }}</p>
+                            <p><strong>Approach:</strong> {{ record.approach_strategy }}</p>
+                            <p><strong>Area:</strong> {{ record.industrial_area }}</p>
+                            {% else %}
+                            <p><strong>Institute Type:</strong> {{ record.institute_type }}</p>
+                            <p><strong>Ownership:</strong> {{ record.ownership }}</p>
+                            <p><strong>Courses:</strong> {{ record.courses|join(', ') }}</p>
+                            <p><strong>Opportunity:</strong> {{ record.opportunity }}</p>
+                            {% endif %}
+                            <p><strong>Contact:</strong> {{ record.contact_person }}</p>
+                            <p><strong>Phone:</strong> {{ record.phone }}</p>
+                            <p><strong>Email:</strong> {{ record.email }}</p>
+                            {% if record.confirm_note %}
+                            <p class="verification-note">{{ record.confirm_note }}</p>
+                            {% endif %}
+                            <form class="notes-form" method="post" action="{{ url_for('save_notes', record_id=record.id) }}">
+                                <label for="notes-{{ record.id }}">Notes</label>
+                                <textarea id="notes-{{ record.id }}" name="notes" rows="4" placeholder="Add visit notes...">{{ record.notes }}</textarea>
+                                <button class="save-button" type="submit">Save notes</button>
+                            </form>
+                        </div>
+                    </details>
+                </article>
+                {% endfor %}
+            </div>
+        </section>
+        {% elif active_tab == 'summary' %}
+        <section class="section-panel">
+            <div class="section-header compact">
+                <div>
+                    <p class="section-kicker">Summary</p>
+                    <h2>Route progress and recommendations</h2>
+                </div>
+                <a class="export-button" href="{{ url_for('export') }}">Export to Excel</a>
+            </div>
+
+            <div class="summary-cards">
+                {% for city in city_progress %}
+                <article class="summary-card {{ 'current' if city.city == current_location else '' }}">
+                    <div class="summary-top">
+                        <strong>{{ city.city }}</strong>
+                        <span>{{ city.completion }}%</span>
+                    </div>
+                    <div class="progress-track">
+                        <span style="width: {{ city.completion }}%"></span>
+                    </div>
+                    <small>{{ city.visited }}/{{ city.total }} visited</small>
+                </article>
+                {% endfor %}
+            </div>
+
+            <div class="summary-section">
+                <h3>Recommended Visit Order</h3>
+                <div class="visit-order-list">
+                    {% for item in visit_order %}
+                    <article class="visit-order-card">
+                        <span class="visit-rank">{{ item.rank }}</span>
+                        <div>
+                            <strong>{{ item.record.name }}</strong>
+                            <p>{{ item.cluster_label }}</p>
+                        </div>
+                    </article>
+                    {% endfor %}
+                </div>
+            </div>
+        </section>
+        {% else %}
+        <section class="section-panel">
+            <div class="section-header compact all-data-header">
+                <div>
+                    <p class="section-kicker">All Data</p>
+                    <h2>{{ 'Industries' if active_tab == 'all-data' else active_tab }}</h2>
+                </div>
+                <div class="inline-actions">
+                    <a class="filter-link {{ 'active' if not high_tooling_only else '' }}" href="{{ url_for('index', tab='all-data') }}">All industries</a>
+                    <a class="filter-link {{ 'active' if high_tooling_only else '' }}" href="{{ url_for('index', tab='all-data', tooling='high') }}">High tooling demand only</a>
+                </div>
+            </div>
+
+            {% for section in city_sections %}
+            <div class="city-block">
+                <div class="city-block-header">
+                    <div>
+                        <h3>{{ section.city }}</h3>
+                        <small>{{ section.completion }}% visited · {{ section.pending }} pending</small>
+                    </div>
+                </div>
+
+                <details class="dataset-group" open>
+                    <summary>Institutes ({{ section.institutes|length }})</summary>
+                    <div class="card-stack">
+                        {% for record in section.institutes %}
+                        <article class="mobile-card">
+                            <div class="mobile-card-top">
+                                <div>
+                                    <span class="mini-type">{{ record.institute_type }} · {{ record.ownership }}</span>
+                                    <h3>{{ record.name }}</h3>
+                                    <p>{{ record.courses|join(', ') }}</p>
+                                </div>
+                                <span class="status-chip {{ record.status_key }}">{{ record.status_label }}</span>
+                            </div>
+                            <div class="action-grid">
+                                <a class="action-button primary-action" href="{{ record.map_url }}" target="_blank" rel="noreferrer">Navigate</a>
+                                <form method="post" action="{{ url_for('toggle_visited', record_id=record.id) }}">
+                                    <button class="action-button status-action {{ record.status_key }}" type="submit">
+                                        {{ 'Mark Visited' if not record.visited else 'Visited' }}
+                                    </button>
+                                </form>
+                            </div>
+                            <details class="details-panel">
+                                <summary>View details</summary>
+                                <div class="details-body">
+                                    <p><strong>Opportunity:</strong> {{ record.opportunity }}</p>
+                                    <p><strong>Contact:</strong> {{ record.contact_person }}</p>
+                                    <p><strong>Phone:</strong> {{ record.phone }}</p>
+                                    <p><strong>Email:</strong> {{ record.email }}</p>
+                                    <form class="notes-form" method="post" action="{{ url_for('save_notes', record_id=record.id) }}">
+                                        <label for="notes-all-{{ record.id }}">Notes</label>
+                                        <textarea id="notes-all-{{ record.id }}" name="notes" rows="4" placeholder="Add visit notes...">{{ record.notes }}</textarea>
+                                        <button class="save-button" type="submit">Save notes</button>
+                                    </form>
+                                </div>
+                            </details>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </details>
+
+                <details class="dataset-group" open>
+                    <summary>Industries ({{ section.industries|length }})</summary>
+                    <div class="card-stack">
+                        {% for record in section.industries %}
+                        <article class="mobile-card {{ 'visited-card' if record.visited else 'pending-card' if record.status_key == 'not-visited' else 'followup-card' }}">
+                            <div class="mobile-card-top">
+                                <div>
+                                    <span class="mini-type">{{ record.industry_segment }} · {{ record.industrial_area }}</span>
+                                    <h3>{{ record.name }}</h3>
+                                    <p>{{ record.tooling_need }}</p>
+                                </div>
+                                {% if record.is_high_value_target %}
+                                <span class="high-value-tag">High Value Target</span>
+                                {% endif %}
+                            </div>
+                            <div class="status-row">
+                                <span class="status-chip {{ record.status_key }}">{{ record.status_label }}</span>
+                                <span class="tooling-badge {{ record.tooling_class }}">{{ record.tooling_requirement }} tooling</span>
+                            </div>
+                            <div class="action-grid">
+                                <a class="action-button primary-action" href="{{ record.map_url }}" target="_blank" rel="noreferrer">Navigate</a>
+                                <form method="post" action="{{ url_for('toggle_visited', record_id=record.id) }}">
+                                    <button class="action-button status-action {{ record.status_key }}" type="submit">
+                                        {{ 'Mark Visited' if not record.visited else 'Visited' }}
+                                    </button>
+                                </form>
+                            </div>
+                            <details class="details-panel">
+                                <summary>View details</summary>
+                                <div class="details-body">
+                                    <p><strong>Opportunity:</strong> {{ record.business_opportunity }}</p>
+                                    <p><strong>Approach:</strong> {{ record.approach_strategy }}</p>
+                                    <p><strong>Contact:</strong> {{ record.contact_person }}</p>
+                                    <p><strong>Phone:</strong> {{ record.phone }}</p>
+                                    <p><strong>Email:</strong> {{ record.email }}</p>
+                                    {% if record.confirm_note %}
+                                    <p class="verification-note">{{ record.confirm_note }}</p>
+                                    {% endif %}
+                                    <form class="notes-form" method="post" action="{{ url_for('save_notes', record_id=record.id) }}">
+                                        <label for="notes-data-{{ record.id }}">Notes</label>
+                                        <textarea id="notes-data-{{ record.id }}" name="notes" rows="4" placeholder="Add visit notes...">{{ record.notes }}</textarea>
+                                        <button class="save-button" type="submit">Save notes</button>
+                                    </form>
+                                </div>
+                            </details>
+                        </article>
+                        {% endfor %}
+                    </div>
+                </details>
+            </div>
+            {% endfor %}
+        </section>
+        {% endif %}
+    </main>
+</body>
+</html>
