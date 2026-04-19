@@ -18,7 +18,7 @@ from openpyxl import Workbook
 
 app = Flask(__name__)
 
-DATA_FILE = BASE_DIR / "data" / "outreach_data.json"
+DATA_FILE = BASE_DIR / "data" / "data.json"
 ROUTE_ORIGIN = "Durg"
 ROUTE = ["Rajnandgaon", "Dongargarh", "Bhandara", "Nagpur"]
 ROUTE_LEGS = {
